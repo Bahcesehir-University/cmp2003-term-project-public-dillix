@@ -32,10 +32,8 @@ static string trimCopy(const string& s) {
     size_t i = 0;
     while (i < s.size() && isWS(s[i])) ++i;
     if (i == s.size()) return "";
-
     size_t j = s.size();
     while (j > i && isWS(s[j - 1])) --j;
-
     return s.substr(i, j - i);
 }
 
@@ -69,8 +67,6 @@ static bool parseHour(const string& raw, int& hour) {
 }
 
 } // namespace
-
-// ===================== IMPLEMENTATION =====================
 
 void TripAnalyzer::ingestFile(const string& csvPath) {
     Store& st = getStore(this);
@@ -148,4 +144,3 @@ vector<SlotCount> TripAnalyzer::topBusySlots(int k) const {
     if ((int)out.size() > k) out.resize(k);
     return out;
 }
-
