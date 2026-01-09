@@ -148,3 +148,4 @@ vector<SlotCount> TripAnalyzer::topBusySlots(int k) const {
     if ((int)out.size() > k) out.resize(k);
     return out;
 }
+
