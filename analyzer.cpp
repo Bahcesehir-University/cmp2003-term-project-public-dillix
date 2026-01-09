@@ -9,7 +9,7 @@
 
 using namespace std;
 
-// ===================== COMPARATORS  =====================
+// ===================== COMPARATORS =====================
 
 struct ZoneCountMinHeapCmp {
     bool operator()(const ZoneCount& a, const ZoneCount& b) const {
@@ -41,22 +41,41 @@ struct SlotCountSortCmp {
     }
 };
 
-// ===================== HELPERS  =====================
+// ===================== ANALYZER STORAGE =====================
+
+class TripAnalyzerImpl {
+public:
+    unordered_map<string, long long> zoneCounts;
+    unordered_map<string, unordered_map<int, long long>> slotCounts;
+};
+
+// نگه‌دارنده‌ی سراسری برای تطبیق با analyzer.h که اعضا ندارد
+static unordered_map<const TripAnalyzer*, TripAnalyzerImpl> gStore;
+
+static TripAnalyzerImpl& impl(const TripAnalyzer* self) {
+    return gStore[self];
+}
+
+// ===================== HELPERS =====================
 
 static void trimStr(string& s) {
     size_t start = s.find_first_not_of(" \t\n\r\f\v");
     size_t end   = s.find_last_not_of(" \t\n\r\f\v");
-    if (start == string::npos || end == string::npos) s.clear();
-    else s = s.substr(start, end - start + 1);
+    if (start == string::npos || end == string::npos)
+        s.clear();
+    else
+        s = s.substr(start, end - start + 1);
 }
 
 static int extractHour(const string& datetime) {
     if (datetime.empty()) return -1;
 
     size_t pos = datetime.find(' ');
-    if (pos == string::npos) pos = datetime.find('T');
+    if (pos == string::npos)
+        pos = datetime.find('T');
 
-    if (pos == string::npos || pos + 1 >= datetime.size()) return -1;
+    if (pos == string::npos || pos + 1 >= datetime.size())
+        return -1;
 
     pos++;
     string hourStr;
@@ -66,24 +85,22 @@ static int extractHour(const string& datetime) {
     }
 
     if (hourStr.empty()) return -1;
-
     int hour = stoi(hourStr);
     if (hour < 0 || hour > 23) return -1;
     return hour;
 }
 
-// ===================== IMPLEMENTATION  =====================
+// ===================== IMPLEMENTATION =====================
 
-void TripAnalyzer::ingestFile(const string& csvPath) {
-    zoneCounts.clear();
-    slotCounts.clear();
+void TripAnalyzer::ingestFile(const std::string& csvPath) {
+    auto& st = impl(this);
+    st.zoneCounts.clear();
+    st.slotCounts.clear();
 
     ifstream fin(csvPath);
-    if (!fin.is_open()) return;
+    if (!fin) return;
 
     string line;
-
-
     while (getline(fin, line)) {
         string tripID, zone, dropoff, pickupTime, dist, fare;
         stringstream ss(line);
@@ -99,24 +116,26 @@ void TripAnalyzer::ingestFile(const string& csvPath) {
         trimStr(zone);
         trimStr(pickupTime);
 
-        if (tripID.empty() || zone.empty() || pickupTime.empty()) continue;
+        if (tripID.empty() || zone.empty() || pickupTime.empty())
+            continue;
 
         int hour = extractHour(pickupTime);
         if (hour == -1) continue;
 
-        zoneCounts[zone]++;
-        slotCounts[zone][hour]++;
+        st.zoneCounts[zone]++;
+        st.slotCounts[zone][hour]++;
     }
 }
 
 vector<ZoneCount> TripAnalyzer::topZones(int k) const {
+    const auto& st = impl(this);
     priority_queue<ZoneCount, vector<ZoneCount>, ZoneCountMinHeapCmp> pq;
 
-    for (const auto& p : zoneCounts) {
+    for (const auto& p : st.zoneCounts) {
         ZoneCount z{p.first, p.second};
-        if ((int)pq.size() < k) {
+        if ((int)pq.size() < k)
             pq.push(z);
-        } else if (ZoneCountMinHeapCmp()(z, pq.top())) {
+        else if (ZoneCountMinHeapCmp()(z, pq.top())) {
             pq.pop();
             pq.push(z);
         }
@@ -133,14 +152,15 @@ vector<ZoneCount> TripAnalyzer::topZones(int k) const {
 }
 
 vector<SlotCount> TripAnalyzer::topBusySlots(int k) const {
+    const auto& st = impl(this);
     priority_queue<SlotCount, vector<SlotCount>, SlotCountMinHeapCmp> pq;
 
-    for (const auto& z : slotCounts) {
+    for (const auto& z : st.slotCounts) {
         for (const auto& h : z.second) {
             SlotCount s{z.first, h.first, h.second};
-            if ((int)pq.size() < k) {
+            if ((int)pq.size() < k)
                 pq.push(s);
-            } else if (SlotCountMinHeapCmp()(s, pq.top())) {
+            else if (SlotCountMinHeapCmp()(s, pq.top())) {
                 pq.pop();
                 pq.push(s);
             }
